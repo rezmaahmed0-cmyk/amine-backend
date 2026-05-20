@@ -1,0 +1,25 @@
+# ─── Secrets — NE JAMAIS committer ───
+.env
+*.env.local
+*.env.production
+
+# ─── Dépendances Node.js ───
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# ─── Logs ───
+logs/
+*.log
+
+# ─── OS ───
+.DS_Store
+Thumbs.db
+
+# ─── IDE ───
+.vscode/
+.idea/
+*.swp
+*.swo
