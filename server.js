@@ -14,14 +14,13 @@ const PORT = process.env.PORT || 3000;
 ───────────────────────────────────────────────────────── */
 app.use(cors({
   origin: function (origin, callback) {
-    // السماح بجميع الطلبات لتجنب مشاكل الهواتف و Firebase
+    // السماح بجميع الطلبات لتشغيل الموقع و Firebase بدون قيود
     return callback(null, true);
   },
   methods: ['POST', 'GET', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
   credentials: false
 }));
-
 /* ─────────────────────────────────────────────────────────
    SYSTEM PROMPT — Amine, conseiller premium Lachachi Home
 ───────────────────────────────────────────────────────── */
