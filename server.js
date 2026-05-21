@@ -14,37 +14,13 @@ const PORT = process.env.PORT || 3000;
 ───────────────────────────────────────────────────────── */
 app.use(cors({
   origin: function (origin, callback) {
-    // Autoriser : pas d'origin (Postman, curl, mobile webview)
-    if (!origin) return callback(null, true);
-
-    // Autoriser tous les sous-domaines Firebase Hosting
-    if (origin.endsWith('.web.app'))        return callback(null, true);
-    if (origin.endsWith('.firebaseapp.com')) return callback(null, true);
-
-    // Autoriser localhost (dev)
-    if (origin.startsWith('http://localhost')) return callback(null, true);
-    if (origin.startsWith('http://127.0.0.1')) return callback(null, true);
-
-    // ✅ Ajoutez ici votre domaine custom si vous en avez un :
-    const CUSTOM_DOMAINS = [
-      // 'https://www.lachachihome.dz',
-      // 'https://lachachihome.dz',
-    ];
-    if (CUSTOM_DOMAINS.includes(origin)) return callback(null, true);
-
-    // Log les origins refusées pour debug
-    console.warn('[CORS] Origin refusée:', origin);
-    callback(new Error('CORS : origine non autorisée — ' + origin));
+    // السماح بجميع الطلبات لتجنب مشاكل الهواتف و Firebase
+    return callback(null, true);
   },
   methods: ['POST', 'GET', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
-  credentials: false,
+  credentials: false
 }));
-
-// Répondre aux preflight OPTIONS immédiatement
-app.options('*', cors());
-
-app.use(express.json({ limit: '20kb' }));
 
 /* ─────────────────────────────────────────────────────────
    SYSTEM PROMPT — Amine, conseiller premium Lachachi Home
