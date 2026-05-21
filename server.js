@@ -9,26 +9,40 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 
 /* ─────────────────────────────────────────────────────────
-   CORS — autorise uniquement votre domaine Firebase Hosting
-   Remplacez par votre vrai domaine en production.
+   CORS — configuration ouverte et robuste
+   Accepte tous les domaines Firebase + domaines custom
 ───────────────────────────────────────────────────────── */
-const ALLOWED_ORIGINS = [
-  'https://lachachi-home-d3ba7.web.app',
-  'https://lachachi-home-d3ba7.firebaseapp.com',
-  // Ajoutez votre domaine custom si vous en avez un :
-  // 'https://www.lachachihome.dz',
-];
-
 app.use(cors({
   origin: function (origin, callback) {
-    // Autoriser les requêtes sans origin (Postman, curl) en dev
+    // Autoriser : pas d'origin (Postman, curl, mobile webview)
     if (!origin) return callback(null, true);
-    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+
+    // Autoriser tous les sous-domaines Firebase Hosting
+    if (origin.endsWith('.web.app'))        return callback(null, true);
+    if (origin.endsWith('.firebaseapp.com')) return callback(null, true);
+
+    // Autoriser localhost (dev)
+    if (origin.startsWith('http://localhost')) return callback(null, true);
+    if (origin.startsWith('http://127.0.0.1')) return callback(null, true);
+
+    // ✅ Ajoutez ici votre domaine custom si vous en avez un :
+    const CUSTOM_DOMAINS = [
+      // 'https://www.lachachihome.dz',
+      // 'https://lachachihome.dz',
+    ];
+    if (CUSTOM_DOMAINS.includes(origin)) return callback(null, true);
+
+    // Log les origins refusées pour debug
+    console.warn('[CORS] Origin refusée:', origin);
     callback(new Error('CORS : origine non autorisée — ' + origin));
   },
-  methods: ['POST', 'OPTIONS'],
+  methods: ['POST', 'GET', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
+  credentials: false,
 }));
+
+// Répondre aux preflight OPTIONS immédiatement
+app.options('*', cors());
 
 app.use(express.json({ limit: '20kb' }));
 
@@ -91,7 +105,7 @@ Toi : "Bonjour ! Bienvenue chez Lachachi Home 😊 Excellent choix, le 160×200 
 `.trim();
 
 /* ─────────────────────────────────────────────────────────
-   ROUTE HEALTH CHECK — Render vérifie que le serveur tourne
+   ROUTE HEALTH CHECK
 ───────────────────────────────────────────────────────── */
 app.get('/', (req, res) => {
   res.json({ status: 'ok', service: 'Amine IA — Lachachi Home Backend' });
@@ -99,7 +113,6 @@ app.get('/', (req, res) => {
 
 /* ─────────────────────────────────────────────────────────
    ROUTE PRINCIPALE — /chat
-   Reçoit l'historique, appelle Gemini, renvoie la réponse
 ───────────────────────────────────────────────────────── */
 app.post('/chat', async (req, res) => {
   try {
@@ -109,10 +122,16 @@ app.post('/chat', async (req, res) => {
       return res.status(400).json({ error: 'history manquant ou invalide' });
     }
 
+    // Vérifier que la clé API est présente
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('[Amine] GEMINI_API_KEY manquante !');
+      return res.status(500).json({ error: 'Configuration serveur incomplète' });
+    }
+
     /* Construire les contents Gemini depuis l'historique */
     const contents = history.map(msg => ({
       role  : msg.role === 'assistant' ? 'model' : 'user',
-      parts : [{ text: msg.content }],
+      parts : [{ text: String(msg.content).slice(0, 2000) }], // limite sécurité
     }));
 
     /* Appel Gemini API */
@@ -124,9 +143,9 @@ app.post('/chat', async (req, res) => {
         },
         contents,
         generationConfig: {
-          temperature      : 0.85,
-          maxOutputTokens  : 600,
-          topP             : 0.9,
+          temperature    : 0.85,
+          maxOutputTokens: 600,
+          topP           : 0.9,
         },
         safetySettings: [
           { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_NONE' },
@@ -151,7 +170,7 @@ app.post('/chat', async (req, res) => {
   } catch (err) {
     const status = err.response?.status || 500;
     const detail = err.response?.data   || err.message;
-    console.error('[Amine] Erreur Gemini:', status, detail);
+    console.error('[Amine] Erreur Gemini:', status, JSON.stringify(detail));
     return res.status(status >= 400 && status < 600 ? status : 500).json({
       error: 'Erreur backend Amine',
     });
@@ -163,5 +182,5 @@ app.post('/chat', async (req, res) => {
 ───────────────────────────────────────────────────────── */
 app.listen(PORT, () => {
   console.log(`✅ Amine Backend démarré sur le port ${PORT}`);
-  console.log(`🔑 Gemini API Key : ${process.env.GEMINI_API_KEY ? '✓ chargée' : '✗ MANQUANTE'}`);
+  console.log(`🔑 Gemini API Key : ${process.env.GEMINI_API_KEY ? '✓ chargée' : '✗ MANQUANTE — AMINE NE FONCTIONNERA PAS'}`);
 });
